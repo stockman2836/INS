@@ -18,14 +18,31 @@ class DroneNavigationEnv(gym.Env):
 
     metadata = {"render_modes": ["human"], "render_fps": 4}
 
-    def __init__(self, world_size: float = 10.0, max_steps: int = 150):
+    def __init__(
+        self,
+        world_size: float = 10.0,
+        max_steps: int = 150,
+        action_mode: str = "continuous",
+    ):
         super().__init__()
         self.world_size = world_size
         self.max_steps = max_steps
         self.step_size = 1.0
         self.goal_threshold = 0.75
+        self.action_mode = action_mode
 
-        self.action_space = spaces.Discrete(6)
+        if self.action_mode == "discrete":
+            self.action_space = spaces.Discrete(6)
+        elif self.action_mode == "continuous":
+            self.action_space = spaces.Box(
+                low=-1.0,
+                high=1.0,
+                shape=(3,),
+                dtype=np.float32,
+            )
+        else:
+            raise ValueError(f"Unsupported action_mode: {self.action_mode}")
+
         self.observation_space = spaces.Box(
             low=-1.0,
             high=1.0,
@@ -66,9 +83,9 @@ class DroneNavigationEnv(gym.Env):
         self.steps_taken = 0
         return self._get_obs(), self._get_info()
 
-    def step(self, action: int):
+    def step(self, action: int | np.ndarray):
         self.steps_taken += 1
-        move = self._moves[action] * self.step_size
+        move = self._decode_action(action)
         proposed_position = self.position + move
         previous_distance = self._distance_to_goal(self.position)
 
@@ -109,6 +126,17 @@ class DroneNavigationEnv(gym.Env):
     def close(self):
         return None
 
+    def _decode_action(self, action: int | np.ndarray) -> np.ndarray:
+        if self.action_mode == "discrete":
+            return self._moves[int(action)] * self.step_size
+
+        continuous_action = np.asarray(action, dtype=np.float32).reshape(3)
+        clipped_action = np.clip(continuous_action, -1.0, 1.0)
+        norm = np.linalg.norm(clipped_action)
+        if norm > 1.0:
+            clipped_action = clipped_action / norm
+        return clipped_action * self.step_size
+
     def _get_obs(self) -> np.ndarray:
         nearest_obstacle = min(
             self.obstacles,
@@ -143,4 +171,3 @@ class DroneNavigationEnv(gym.Env):
             if np.all(position >= lower) and np.all(position <= upper):
                 return True
         return False
-

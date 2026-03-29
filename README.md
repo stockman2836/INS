@@ -6,12 +6,12 @@ Simple starter project for the assignment "Drone control in 3D space with RL".
 
 This repository starts with a simplified 3D environment:
 
-- the drone moves in 6 discrete directions,
+- the drone moves in 3D space,
 - the goal is a fixed point in 3D space,
 - collisions with obstacles end the episode,
 - the reward encourages progress toward the target and penalizes crashes.
 
-This is enough to begin comparing `DQN`, `PPO`, and `SAC` without building a full simulator.
+`DQN` uses a discrete action version of the environment, while `PPO` and `SAC` use a continuous action version compatible with actor-critic control methods.
 
 ## Setup
 

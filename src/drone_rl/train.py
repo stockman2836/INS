@@ -18,13 +18,19 @@ ALGORITHMS = {
 }
 
 
-def make_env():
-    return Monitor(DroneNavigationEnv())
+def action_mode_for_algorithm(algorithm_name: str) -> str:
+    if algorithm_name == "dqn":
+        return "discrete"
+    return "continuous"
+
+
+def make_env(algorithm_name: str):
+    return Monitor(DroneNavigationEnv(action_mode=action_mode_for_algorithm(algorithm_name)))
 
 
 def train(algorithm_name: str, total_timesteps: int, output_dir: Path) -> Path:
     algorithm_cls = ALGORITHMS[algorithm_name]
-    env = DummyVecEnv([make_env])
+    env = DummyVecEnv([lambda: make_env(algorithm_name)])
 
     model = algorithm_cls(
         "MlpPolicy",
@@ -69,7 +75,10 @@ def main():
     args = parser.parse_args()
 
     if args.check_env:
-        check_env(DroneNavigationEnv(), warn=True)
+        check_env(
+            DroneNavigationEnv(action_mode=action_mode_for_algorithm(args.algo)),
+            warn=True,
+        )
 
     model_path = train(args.algo, args.timesteps, args.output_dir)
     print(f"Saved model to {model_path}")

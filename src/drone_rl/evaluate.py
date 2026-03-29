@@ -18,10 +18,16 @@ ALGORITHMS = {
 }
 
 
+def action_mode_for_algorithm(algorithm_name: str) -> str:
+    if algorithm_name == "dqn":
+        return "discrete"
+    return "continuous"
+
+
 def evaluate_model(algorithm_name: str, model_path: Path, episodes: int) -> dict:
     algorithm_cls = ALGORITHMS[algorithm_name]
     model = algorithm_cls.load(model_path)
-    env = DroneNavigationEnv()
+    env = DroneNavigationEnv(action_mode=action_mode_for_algorithm(algorithm_name))
 
     episode_rows: list[dict] = []
 
@@ -36,7 +42,11 @@ def evaluate_model(algorithm_name: str, model_path: Path, episodes: int) -> dict
 
         while not (terminated or truncated):
             action, _ = model.predict(observation, deterministic=True)
-            observation, reward, terminated, truncated, info = env.step(int(action))
+            if algorithm_name == "dqn":
+                env_action = int(action)
+            else:
+                env_action = action
+            observation, reward, terminated, truncated, info = env.step(env_action)
             total_reward += float(reward)
 
             current_position = env.position.copy()
@@ -101,7 +111,7 @@ def save_results(summary: dict, output_dir: Path) -> tuple[Path, Path]:
 
 
 def default_model_path(algorithm_name: str, models_dir: Path) -> Path:
-    return models_dir / f"{algorithm_name}_drone_navigation.zip"
+    return models_dir / f"{algorithm_name}_drone_navigation"
 
 
 def main():
