@@ -1,68 +1,82 @@
 # INS
 
-Simple starter project for the assignment "Drone control in 3D space with RL".
-
-## Project idea
-
-This repository starts with a simplified 3D environment:
-
-- the drone moves in 3D space,
-- the goal is a fixed point in 3D space,
-- collisions with obstacles end the episode,
-- the reward encourages progress toward the target and penalizes crashes.
-
-`DQN` uses a discrete action version of the environment, while `PPO` and `SAC` use a continuous action version compatible with actor-critic control methods.
-
-## Setup
-
-Activate the virtual environment:
+## 1. Activate environment
 
 ```powershell
-.venv\Scripts\activate
+.\.venv\Scripts\Activate.ps1
 ```
 
-## Train an agent
+If PowerShell blocks scripts:
 
-Run a short training session:
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\.venv\Scripts\Activate.ps1
+```
+
+## 2. Set source path
 
 ```powershell
 $env:PYTHONPATH="src"
-python -m drone_rl.train --algo ppo --timesteps 20000 --check-env
 ```
 
-Try other algorithms:
+## 3. Train
+
+PPO:
 
 ```powershell
-python -m drone_rl.train --algo dqn --timesteps 20000
-python -m drone_rl.train --algo sac --timesteps 20000
+python -m drone_rl.train --algo ppo --timesteps 100000 --check-env
 ```
 
-## Evaluate a trained model
-
-After training, run evaluation episodes and save metrics:
+DQN:
 
 ```powershell
-$env:PYTHONPATH="src"
+python -m drone_rl.train --algo dqn --timesteps 100000 --check-env
+```
+
+SAC:
+
+```powershell
+python -m drone_rl.train --algo sac --timesteps 100000 --check-env
+```
+
+## 4. Evaluate
+
+PPO:
+
+```powershell
 python -m drone_rl.evaluate --algo ppo --episodes 25
 ```
 
-Evaluation outputs are saved to `results/`:
+DQN:
 
-- JSON summary with aggregate metrics,
-- CSV table with one row per episode.
+```powershell
+python -m drone_rl.evaluate --algo dqn --episodes 25
+```
 
-These metrics are a good starting point for your report:
+SAC:
 
-- success rate,
-- collision rate,
-- average number of steps,
-- average path length,
-- average remaining distance to goal,
-- average reward.
+```powershell
+python -m drone_rl.evaluate --algo sac --episodes 25
+```
 
-## Next steps
+## 5. Outputs
 
-- add evaluation scripts for comparing metrics,
-- log collisions, path length, and success rate,
-- visualize trajectories,
-- tune reward shaping and obstacle layouts.
+Trained models:
+
+```text
+models/
+```
+
+Evaluation results:
+
+```text
+results/
+```
+
+## 6. Run without activation
+
+```powershell
+$env:PYTHONPATH="src"
+.\.venv\Scripts\python.exe -m drone_rl.train --algo ppo --timesteps 100000 --check-env
+.\.venv\Scripts\python.exe -m drone_rl.evaluate --algo ppo --episodes 25
+```
