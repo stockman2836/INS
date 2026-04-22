@@ -23,6 +23,10 @@ class DroneNavigationEnv(gym.Env):
         world_size: float = 10.0,
         max_steps: int = 150,
         action_mode: str = "continuous",
+        randomize: bool = False,
+        randomize_start: bool = True,
+        randomize_goal: bool = True,
+        min_start_goal_distance: float = 6.0,
     ):
         super().__init__()
         self.world_size = world_size
@@ -30,6 +34,10 @@ class DroneNavigationEnv(gym.Env):
         self.step_size = 1.0
         self.goal_threshold = 0.75
         self.action_mode = action_mode
+        self.randomize = randomize
+        self.randomize_start = randomize_start
+        self.randomize_goal = randomize_goal
+        self.min_start_goal_distance = float(min_start_goal_distance)
 
         if self.action_mode == "discrete":
             self.action_space = spaces.Discrete(6)
@@ -79,9 +87,39 @@ class DroneNavigationEnv(gym.Env):
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
+        if self.randomize:
+            self._sample_start_goal()
         self.position = self.start.copy()
         self.steps_taken = 0
         return self._get_obs(), self._get_info()
+
+    def _sample_free_point(self, max_tries: int = 200) -> np.ndarray:
+        half = self.world_size / 2.0 - self.step_size
+        rng = self.np_random
+        for _ in range(max_tries):
+            candidate = rng.uniform(-half, half, size=3).astype(np.float32)
+            if not self._hits_obstacle(candidate):
+                return candidate
+        return np.array([-half, -half, -half], dtype=np.float32)
+
+    def _sample_start_goal(self) -> None:
+        if self.randomize_start:
+            start = self._sample_free_point()
+        else:
+            start = self.start.copy()
+        for _ in range(200):
+            if self.randomize_goal:
+                goal = self._sample_free_point()
+            else:
+                goal = self.goal.copy()
+            if float(np.linalg.norm(goal - start)) >= self.min_start_goal_distance:
+                self.start = start.astype(np.float32)
+                self.goal = goal.astype(np.float32)
+                return
+        self.start = start.astype(np.float32)
+        self.goal = (
+            self.goal.copy() if not self.randomize_goal else self._sample_free_point()
+        ).astype(np.float32)
 
     def step(self, action: int | np.ndarray):
         self.steps_taken += 1
@@ -152,10 +190,17 @@ class DroneNavigationEnv(gym.Env):
         return obs.astype(np.float32)
 
     def _get_info(self, collision: bool = False) -> dict:
+        reached_goal = self._distance_to_goal(self.position) <= self.goal_threshold
+        timeout = (not collision) and (not reached_goal) and self.steps_taken >= self.max_steps
         return {
             "distance_to_goal": self._distance_to_goal(self.position),
             "collision": collision,
+            "reached_goal": bool(reached_goal and not collision),
+            "timeout": bool(timeout),
             "steps_taken": self.steps_taken,
+            "position": self.position.copy(),
+            "start": self.start.copy(),
+            "goal": self.goal.copy(),
         }
 
     def _distance_to_goal(self, position: np.ndarray) -> float:

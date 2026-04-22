@@ -1,8 +1,8 @@
-numpy
-pandas
-matplotlib
-gymnasium
-stable-baselines3[extra]
-torch
-tqdm
-jupyter
+numpy>=1.26,<3
+pandas>=2.0,<3
+matplotlib>=3.7,<4
+gymnasium>=0.29,<1.1
+stable-baselines3[extra]>=2.3,<3
+torch>=2.2,<3
+tqdm>=4.66
+jupyter>=1.0
